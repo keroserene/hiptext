@@ -49,6 +49,7 @@ class Artiste {  // The one who lives in your terminal.
   int width_ = -1;  // Final output dimensions.
   int height_ = -1;  
 
+  bool is_movie_;
   bool cursor_saved_ = false;
 };
 

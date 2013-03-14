@@ -57,19 +57,30 @@ void Artiste::ComputeDimensions(double media_ratio) {
   // - Native resolution/aspect-ratio of input media,
   // - Terminal size limitations,
   // - User's preferred FLAGS_width and/or FLAGS_height.
+  // - Whether or not we are rendering a single image or a movie.
+  //   (Terminal restrictions are stricter for movies)
   //
   // Should only be called once: after extracting the input media's aspect
   // ratio but prior to any rendering.
-  double width = std::min(FLAGS_width ? FLAGS_width : term_width_,
-                          term_width_);
-  double height = std::min(FLAGS_height ? FLAGS_height : term_height_,
-                           term_height_);
   true_ratio_ = user_ratio_ ? user_ratio_ : media_ratio;
   LOG(INFO) << "Aspect Ratio: " << true_ratio_;
 
-  // Apply ratio both ways to ensure a fit.
-  height = std::min(height, width / true_ratio_);
-  width = std::min(width, height * true_ratio_);
+  double width = FLAGS_width ? FLAGS_width : term_width_;
+  double height = FLAGS_height ? FLAGS_height : term_height_;
+  if (is_movie_) {
+    // Apply ratio both ways to ensure a fit if necessary.
+    width = std::min(width, (double)term_width_);
+    height = std::min(height, (double)term_height_);
+    width = std::min(width, height * true_ratio_);
+    height = std::min(height, width / true_ratio_);
+    width = std::min(width, height * true_ratio_);
+  } else {
+    if (!FLAGS_height) {
+      height = width / true_ratio_;
+    } else {
+      width = height * true_ratio_;
+    }
+  }
   width_ = (int)width;
   height_ = (int)height / (duo_pixel_ ? 1 : 2);
 
@@ -78,6 +89,7 @@ void Artiste::ComputeDimensions(double media_ratio) {
 }
 
 void Artiste::PrintImage(Graphic graphic) {  
+  is_movie_ = false;
   // Image decoders biject 1:1 to Hiptext's raw RGB representation,
   // so must be scaled once more prior to rendering.
   ComputeDimensions(RatioOf(graphic.width(), graphic.height()));
@@ -90,6 +102,7 @@ void Artiste::PrintImage(Graphic graphic) {
 }
 
 void Artiste::PrintMovie(Movie movie) {
+  is_movie_ = true;
   // Movie files sws_scale to size in real-time, so the final 
   // dimensions should be precomputed to avoid redundant scaling.
   ComputeDimensions(RatioOf(movie.width(), movie.height()));
@@ -103,6 +116,7 @@ void Artiste::PrintMovie(Movie movie) {
       string lulz;
       std::getline(std::cin, lulz);
     }
+    fflush(stdin);
   }
   ShowCursor();
 }
