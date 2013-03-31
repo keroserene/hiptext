@@ -5,7 +5,7 @@
 // #include <sys/stat.h>
 // #include <sys/types.h>
 #include <signal.h>
-// #include <thread>
+#include <thread>
 
 // #include <algorithm>
 #include <cassert>
@@ -68,7 +68,7 @@ void PrintImageXterm256(std::ostream& os, const Graphic& graphic) {
   for (int y = 0; y < graphic.height(); ++y) {
     for (int x = 0; x < graphic.width(); ++x) {
       int code = rgb_to_xterm256(graphic.Get(x, y).Copy().Opacify(bg));
-      if (!FLAGS_bgprint && code == bg256) {
+      if (!FLAGS_bgprint && code == bg256 && x > 0) {
         out.SetBackground256(0);
       } else {
         out.SetBackground256(code);
@@ -148,6 +148,22 @@ void OnCtrlC(int /*signal*/) {
   exit(0);
 }
 
+void Render(string path) {
+  
+  string extension = GetExtension(path);
+  if (extension == "png") {
+    g_artiste_ptr->PrintImage(LoadPNG(path));
+  } else if (extension == "jpg" || extension == "jpeg") {
+    g_artiste_ptr->PrintImage(LoadJPEG(path));
+  } else if (extension == "mov" || extension == "mp4" || extension == "flv" ||
+             extension == "avi" || extension == "mkv") {
+    g_artiste_ptr->PrintMovie(Movie(path));
+  } else {
+    fprintf(stderr, "Unknown Filetype: %s\n", extension.data());
+    exit(1);
+  }
+}
+
 int main(int argc, char** argv) {
   // if (!isatty(1))
   //   FLAGS_color = false;
@@ -195,20 +211,11 @@ int main(int argc, char** argv) {
     exit(1);
   }
   string path = argv[1];
-  string extension = GetExtension(path);
-  if (extension == "png") {
-    artiste.PrintImage(LoadPNG(path));
-  } else if (extension == "jpg" || extension == "jpeg") {
-    artiste.PrintImage(LoadJPEG(path));
-  } else if (extension == "mov" || extension == "mp4" || extension == "flv" ||
-             extension == "avi" || extension == "mkv") {
-    artiste.PrintMovie(Movie(path));
-  } else {
-    fprintf(stderr, "Unknown Filetype: %s\n", extension.data());
-    exit(1);
-  }
+  Render(path);
 
   // std::thread t(Render, path);
+  // t.detach();
+  // while(1);
   // t.join();
   exit(0);
 }
